@@ -125,24 +125,7 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 
 		// 特殊处理 responses API（包含 compact）
 		if info.RelayMode == relayconstant.RelayModeResponses || info.RelayMode == relayconstant.RelayModeResponsesCompact {
-			responsesApiVersion := "preview"
-
-			subUrl := "/openai/v1/responses"
-			if strings.Contains(info.ChannelBaseUrl, "cognitiveservices.azure.com") {
-				subUrl = "/openai/responses"
-				responsesApiVersion = apiVersion
-			}
-
-			if info.ChannelOtherSettings.AzureResponsesVersion != "" {
-				responsesApiVersion = info.ChannelOtherSettings.AzureResponsesVersion
-			}
-
-			// compact 模式追加 /compact
-			if info.RelayMode == relayconstant.RelayModeResponsesCompact {
-				subUrl = subUrl + "/compact"
-			}
-
-			requestURL = fmt.Sprintf("%s?api-version=%s", subUrl, responsesApiVersion)
+			requestURL = azureResponsesRequestURL(info, apiVersion)
 			return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, requestURL, info.ChannelType), nil
 		}
 
@@ -171,6 +154,41 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		}
 		return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, info.RequestURLPath, info.ChannelType), nil
 	}
+}
+
+func azureResponsesRequestURL(info *relaycommon.RelayInfo, apiVersion string) string {
+	responsesPath := "responses"
+	if info.RelayMode == relayconstant.RelayModeResponsesCompact {
+		responsesPath += "/compact"
+	}
+
+	responsesApiVersion := strings.TrimSpace(info.ChannelOtherSettings.AzureResponsesVersion)
+	if responsesApiVersion == "" && strings.Contains(info.ChannelBaseUrl, "cognitiveservices.azure.com") {
+		responsesApiVersion = strings.TrimSpace(apiVersion)
+	}
+	if responsesApiVersion == "" || isAzureResponsesV1Version(responsesApiVersion) {
+		return azureV1RequestPath(info.ChannelBaseUrl, responsesPath)
+	}
+
+	subUrl := "/openai/" + responsesPath
+	return fmt.Sprintf("%s?api-version=%s", subUrl, url.QueryEscape(responsesApiVersion))
+}
+
+func isAzureResponsesV1Version(version string) bool {
+	switch strings.ToLower(strings.TrimSpace(version)) {
+	case "v1", "preview", "v1-preview":
+		return true
+	default:
+		return false
+	}
+}
+
+func azureV1RequestPath(baseURL string, path string) string {
+	basePath := strings.ToLower(strings.TrimRight(baseURL, "/"))
+	if strings.HasSuffix(basePath, "/openai/v1") {
+		return "/" + path
+	}
+	return "/openai/v1/" + path
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, header *http.Header, info *relaycommon.RelayInfo) error {
