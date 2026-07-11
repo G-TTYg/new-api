@@ -28,7 +28,7 @@ func TestConvertOpenAIResponsesRequestPreservesReasoningModeContextAndParsesMaxS
 	assert.Equal(t, "gpt-5.6-sol", req.Model)
 	require.NotNil(t, req.Reasoning)
 	assert.Equal(t, "max", req.Reasoning.Effort)
-	assert.Equal(t, "pro", req.Reasoning.Mode)
-	assert.Equal(t, "all_turns", req.Reasoning.Context)
+	assert.JSONEq(t, `"pro"`, string(req.Reasoning.Mode))
+	assert.JSONEq(t, `"all_turns"`, string(req.Reasoning.Context))
 	assert.Equal(t, "max", info.ReasoningEffort)
 }
