@@ -3,6 +3,7 @@ package relayconvert
 import (
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -84,6 +85,25 @@ func TestResponsesResponseToChatCompletionsPreservesTextAndToolCalls(t *testing.
 	assert.Equal(t, "lookup", toolCalls[0].Function.Name)
 	assert.Equal(t, `{"q":"x"}`, toolCalls[0].Function.Arguments)
 	assert.Equal(t, 7, usage.TotalTokens)
+}
+
+func TestUsageFromResponsesUsagePreservesCacheWriteTokens(t *testing.T) {
+	var src dto.Usage
+	err := common.Unmarshal([]byte(`{
+		"input_tokens":128,
+		"output_tokens":8,
+		"total_tokens":136,
+		"input_tokens_details":{
+			"cached_tokens":64,
+			"cache_write_tokens":32
+		}
+	}`), &src)
+	require.NoError(t, err)
+
+	usage := UsageFromResponsesUsage(&src)
+
+	assert.Equal(t, 64, usage.PromptTokensDetails.CachedTokens)
+	assert.Equal(t, 32, usage.PromptTokensDetails.CachedCreationTokens)
 }
 
 func TestResponsesResponseToChatCompletionsPreservesReasoningSummary(t *testing.T) {
