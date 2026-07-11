@@ -96,6 +96,34 @@ func TestOpenAIResponsesRequestPreservesReasoningModeAndContext(t *testing.T) {
 	require.Equal(t, "all_turns", gjson.GetBytes(encoded, "reasoning.context").String())
 }
 
+func TestOpenAIResponsesRequestPreservesPromptCacheOptionsAndBreakpoints(t *testing.T) {
+	raw := []byte(`{
+		"model":"gpt-5.6-luna",
+		"input":[{
+			"role":"user",
+			"content":[{
+				"type":"input_text",
+				"text":"stable prefix",
+				"prompt_cache_breakpoint":{"mode":"explicit"}
+			}]
+		}],
+		"prompt_cache_key":"stable-key",
+		"prompt_cache_options":{"mode":"implicit","ttl":"30m"}
+	}`)
+
+	var req OpenAIResponsesRequest
+	err := common.Unmarshal(raw, &req)
+	require.NoError(t, err)
+
+	encoded, err := common.Marshal(req)
+	require.NoError(t, err)
+
+	require.Equal(t, "stable-key", gjson.GetBytes(encoded, "prompt_cache_key").String())
+	require.Equal(t, "implicit", gjson.GetBytes(encoded, "prompt_cache_options.mode").String())
+	require.Equal(t, "30m", gjson.GetBytes(encoded, "prompt_cache_options.ttl").String())
+	require.Equal(t, "explicit", gjson.GetBytes(encoded, "input.0.content.0.prompt_cache_breakpoint.mode").String())
+}
+
 func TestGeneralOpenAIRequestGetSystemRoleName(t *testing.T) {
 	tests := []struct {
 		name  string
