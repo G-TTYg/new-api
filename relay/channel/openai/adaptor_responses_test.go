@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/QuantumNous/new-api/dto"
@@ -16,8 +17,8 @@ func TestConvertOpenAIResponsesRequestPreservesReasoningModeContextAndParsesMaxS
 	got, err := (&Adaptor{}).ConvertOpenAIResponsesRequest(nil, info, dto.OpenAIResponsesRequest{
 		Model: "gpt-5.6-sol-max",
 		Reasoning: &dto.Reasoning{
-			Mode:    "pro",
-			Context: "all_turns",
+			Mode:    json.RawMessage(`"pro"`),
+			Context: json.RawMessage(`"all_turns"`),
 		},
 	})
 	require.NoError(t, err)
