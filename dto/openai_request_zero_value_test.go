@@ -72,6 +72,30 @@ func TestOpenAIResponsesRequestPreserveExplicitZeroValues(t *testing.T) {
 	require.True(t, gjson.GetBytes(encoded, "top_p").Exists())
 }
 
+func TestOpenAIResponsesRequestPreservesReasoningModeAndContext(t *testing.T) {
+	raw := []byte(`{
+		"model":"gpt-5.6-sol",
+		"input":"check this migration plan",
+		"reasoning":{
+			"effort":"max",
+			"mode":"pro",
+			"context":"all_turns"
+		},
+		"previous_response_id":"resp_xxx"
+	}`)
+
+	var req OpenAIResponsesRequest
+	err := common.Unmarshal(raw, &req)
+	require.NoError(t, err)
+
+	encoded, err := common.Marshal(req)
+	require.NoError(t, err)
+
+	require.Equal(t, "max", gjson.GetBytes(encoded, "reasoning.effort").String())
+	require.Equal(t, "pro", gjson.GetBytes(encoded, "reasoning.mode").String())
+	require.Equal(t, "all_turns", gjson.GetBytes(encoded, "reasoning.context").String())
+}
+
 func TestGeneralOpenAIRequestGetSystemRoleName(t *testing.T) {
 	tests := []struct {
 		name  string
